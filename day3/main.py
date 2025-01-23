@@ -18,6 +18,14 @@ class Rucksack(NamedTuple):
     second_compartment: list[str]
 
 
+class ElfGroup(NamedTuple):
+    """Represents a group of three elves with rucksacks."""
+
+    first_rucksack: Rucksack
+    second_rucksack: Rucksack
+    third_rucksack: Rucksack
+
+
 def read_rucksacks(file_path: str) -> list[Rucksack]:
     """Read information about rucksacks from a file."""
 
@@ -58,6 +66,30 @@ def get_item_priority(item: str) -> int:
     return priority
 
 
+def create_elf_groups_from_rucksacks(rucksacks: list[Rucksack]) -> list[ElfGroup]:
+    """Group the rucksacks into groups of three for the elves."""
+
+    rucksack_groups = (rucksacks[i : i + 3] for i in range(0, len(rucksacks), 3))
+    elf_groups = [ElfGroup(*rucksack_group) for rucksack_group in rucksack_groups]
+
+    return elf_groups
+
+
+def get_badge_item(elf_group: ElfGroup) -> str:
+    """Determine the badge item for a group of elves."""
+
+    item_sets = []
+
+    for elf_rucksack in elf_group:
+        first_compartment, second_compartment = elf_rucksack
+        distinct_items = set(first_compartment + second_compartment)
+        item_sets.append(distinct_items)
+
+    common_items = set.intersection(*item_sets)
+
+    return common_items.pop()
+
+
 def main() -> None:
     """Read the contents of each rucksack from a file and process them."""
 
@@ -66,12 +98,15 @@ def main() -> None:
 
     rucksacks = read_rucksacks(file_path)
 
-    misplaced_items = [
-        find_item_in_both_compartments(rucksack) for rucksack in rucksacks
-    ]
+    misplaced_items = map(find_item_in_both_compartments, rucksacks)
     misplaced_item_priorities = [get_item_priority(item) for item in misplaced_items]
-    priority_sum = sum(misplaced_item_priorities)
-    print(f"The sum of the priority values of the misplaced items is {priority_sum}")
+    misplaced_item_priority_sum = sum(misplaced_item_priorities)
+    print(f"The priority sum of the misplaced items is {misplaced_item_priority_sum}")
+
+    elf_groups = create_elf_groups_from_rucksacks(rucksacks)
+    elf_group_badges = [get_badge_item(group) for group in elf_groups]
+    badge_priority_sum = sum(get_item_priority(badge) for badge in elf_group_badges)
+    print(f"The priority sum of the badge items is {badge_priority_sum}")
 
 
 if __name__ == "__main__":
