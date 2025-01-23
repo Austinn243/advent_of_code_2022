@@ -4,6 +4,7 @@ Rock Paper Scissors
 https://adventofcode.com/2022/day/2
 """
 
+from collections.abc import Callable
 from enum import IntEnum
 from os import path
 from typing import NamedTuple
@@ -103,11 +104,53 @@ def get_assumed_player_choice(encrypted_strategy: EncryptedStrategy) -> Choice:
             raise ValueError(f"Invalid player outcome: {player_outcome}")
 
 
-def decrypt_strategy(encrypted_strategy: EncryptedStrategy) -> DecryptedStrategy:
+def get_desired_outcome(player_outcome: str) -> Outcome:
+    """Determine the desired outcome of the round."""
+
+    match player_outcome:
+        case "X":
+            return Outcome.LOSE
+        case "Y":
+            return Outcome.DRAW
+        case "Z":
+            return Outcome.WIN
+        case _:
+            raise ValueError(f"Invalid player outcome: {player_outcome}")
+
+
+def get_player_choice_by_desired_outcome(
+    encrypted_strategy: EncryptedStrategy,
+) -> Choice:
+    """Get the player's choice based on the desired outcome."""
+
+    desired_outcome = get_desired_outcome(encrypted_strategy.player_outcome)
+    opponent_choice = get_opponent_choice(encrypted_strategy.opponent_move)
+
+    if desired_outcome == Outcome.DRAW:
+        return opponent_choice
+
+    if desired_outcome == Outcome.WIN:
+        return next(
+            winning_choice
+            for winning_choice, losing_choice in WINNING_MATCHUPS
+            if losing_choice == opponent_choice
+        )
+
+    return next(
+        losing_choice
+        for winning_choice, losing_choice in WINNING_MATCHUPS
+        if winning_choice == opponent_choice
+    )
+
+
+def decrypt_strategy(
+    encrypted_strategy: EncryptedStrategy,
+    get_player_choice: Callable[[EncryptedStrategy], Choice],
+) -> DecryptedStrategy:
     """Decrypt an encrypted strategy using a cipher."""
 
     opponent_choice = get_opponent_choice(encrypted_strategy.opponent_move)
-    player_choice = get_assumed_player_choice(encrypted_strategy)
+    player_choice = get_player_choice(encrypted_strategy)
 
     return (opponent_choice, player_choice)
 
@@ -144,16 +187,25 @@ def main() -> None:
     file_path = path.join(path.dirname(__file__), input_file)
 
     encrypted_strategies = read_strategy_guide(file_path)
-    print(encrypted_strategies)
 
-    decrypted_strategies = [
-        decrypt_strategy(strategy) for strategy in encrypted_strategies
+    assumed_strategies = [
+        decrypt_strategy(strategy, get_assumed_player_choice)
+        for strategy in encrypted_strategies
     ]
-    print(decrypted_strategies)
+    assumed_scores = [score_strategy(strategy) for strategy in assumed_strategies]
+    total_score = sum(assumed_scores)
+    print("While working under initial assumptions:")
+    print(f"The total score is: {total_score}")
+    print()
 
-    scores = [score_strategy(strategy) for strategy in decrypted_strategies]
-    total_score = sum(scores)
-    print(total_score)
+    desired_strategies = [
+        decrypt_strategy(strategy, get_player_choice_by_desired_outcome)
+        for strategy in encrypted_strategies
+    ]
+    desired_scores = [score_strategy(strategy) for strategy in desired_strategies]
+    total_score = sum(desired_scores)
+    print("While working under the actual desired outcomes:")
+    print(f"The total score is: {total_score}")
 
 
 if __name__ == "__main__":
