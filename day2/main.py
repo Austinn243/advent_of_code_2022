@@ -35,19 +35,9 @@ class EncryptedStrategy(NamedTuple):
     player_outcome: str
 
 
-Cipher = dict[str, Choice]
 DecryptedStrategy = tuple[Choice, Choice]
 ChoiceScoreGuide = dict[Choice, int]
 OutcomeScoreGuide = dict[Outcome, int]
-
-CIPHER: Cipher = {
-    "A": Choice.ROCK,
-    "B": Choice.PAPER,
-    "C": Choice.SCISSORS,
-    "X": Choice.ROCK,
-    "Y": Choice.PAPER,
-    "Z": Choice.SCISSORS,
-}
 
 DEFAULT_CHOICE_SCORE_GUIDE: ChoiceScoreGuide = {
     Choice.ROCK: 1,
@@ -83,13 +73,43 @@ def parse_encrypted_strategy(line: str) -> EncryptedStrategy:
     return EncryptedStrategy(opponent_move, player_outcome)
 
 
-def decrypt_strategy(
-    encrypted_strategy: EncryptedStrategy,
-    cipher: Cipher,
-) -> DecryptedStrategy:
+def get_opponent_choice(opponent_move: str) -> Choice:
+    """Get the opponent's choice from an encrypted move."""
+
+    match opponent_move:
+        case "A":
+            return Choice.ROCK
+        case "B":
+            return Choice.PAPER
+        case "C":
+            return Choice.SCISSORS
+        case _:
+            raise ValueError(f"Invalid opponent move: {opponent_move}")
+
+
+def get_assumed_player_choice(encrypted_strategy: EncryptedStrategy) -> Choice:
+    """Get the player's choice based on the player's original assumption."""
+
+    player_outcome = encrypted_strategy.player_outcome
+
+    match player_outcome:
+        case "X":
+            return Choice.ROCK
+        case "Y":
+            return Choice.PAPER
+        case "Z":
+            return Choice.SCISSORS
+        case _:
+            raise ValueError(f"Invalid player outcome: {player_outcome}")
+
+
+def decrypt_strategy(encrypted_strategy: EncryptedStrategy) -> DecryptedStrategy:
     """Decrypt an encrypted strategy using a cipher."""
 
-    return tuple(cipher[move] for move in encrypted_strategy)
+    opponent_choice = get_opponent_choice(encrypted_strategy.opponent_move)
+    player_choice = get_assumed_player_choice(encrypted_strategy)
+
+    return (opponent_choice, player_choice)
 
 
 def get_outcome(player_choice: Choice, opponent_choice: Choice) -> Outcome:
@@ -127,7 +147,7 @@ def main() -> None:
     print(encrypted_strategies)
 
     decrypted_strategies = [
-        decrypt_strategy(strategy, CIPHER) for strategy in encrypted_strategies
+        decrypt_strategy(strategy) for strategy in encrypted_strategies
     ]
     print(decrypted_strategies)
 
