@@ -6,16 +6,16 @@ https://adventofcode.com/2022/day/2
 
 from enum import IntEnum
 from os import path
+from typing import NamedTuple
 
 INPUT_FILE = "input.txt"
 TEST_FILE = "test.txt"
 
 
-
 class Choice(IntEnum):
     """Choices for Rock Paper Scissors."""
 
-    ROCK = 1 
+    ROCK = 1
     PAPER = 2
     SCISSORS = 3
 
@@ -27,9 +27,16 @@ class Outcome(IntEnum):
     LOSE = 2
     DRAW = 3
 
+
+class EncryptedStrategy(NamedTuple):
+    """An encrypted strategy for Rock Paper Scissors."""
+
+    opponent_move: str
+    player_outcome: str
+
+
 Cipher = dict[str, Choice]
 DecryptedStrategy = tuple[Choice, Choice]
-EncryptedStrategy = tuple[str, str]
 ChoiceScoreGuide = dict[Choice, int]
 OutcomeScoreGuide = dict[Outcome, int]
 
@@ -65,10 +72,21 @@ def read_strategy_guide(file_path: str) -> list[EncryptedStrategy]:
     """Read an encrypted strategy guide from a file."""
 
     with open(file_path, encoding="utf-8") as file:
-        return [tuple(line.strip().split(" ")) for line in file]
+        return [parse_encrypted_strategy(line.strip()) for line in file]
 
 
-def decrypt_strategy(encrypted_strategy: EncryptedStrategy, cipher: Cipher) -> DecryptedStrategy:
+def parse_encrypted_strategy(line: str) -> EncryptedStrategy:
+    """Parse an encrypted strategy from a line of text."""
+
+    opponent_move, player_outcome = line.split()
+
+    return EncryptedStrategy(opponent_move, player_outcome)
+
+
+def decrypt_strategy(
+    encrypted_strategy: EncryptedStrategy,
+    cipher: Cipher,
+) -> DecryptedStrategy:
     """Decrypt an encrypted strategy using a cipher."""
 
     return tuple(cipher[move] for move in encrypted_strategy)
@@ -82,7 +100,7 @@ def get_outcome(player_choice: Choice, opponent_choice: Choice) -> Outcome:
 
     if (player_choice, opponent_choice) in WINNING_MATCHUPS:
         return Outcome.WIN
-    
+
     return Outcome.LOSE
 
 
@@ -99,7 +117,6 @@ def score_strategy(
     return choice_score_guide[player_choice] + outcome_score_guide[outcome]
 
 
-
 def main() -> None:
     """Read an encrypted strategy guide from a file and process it."""
 
@@ -109,7 +126,9 @@ def main() -> None:
     encrypted_strategies = read_strategy_guide(file_path)
     print(encrypted_strategies)
 
-    decrypted_strategies = [decrypt_strategy(strategy, CIPHER) for strategy in encrypted_strategies]
+    decrypted_strategies = [
+        decrypt_strategy(strategy, CIPHER) for strategy in encrypted_strategies
+    ]
     print(decrypted_strategies)
 
     scores = [score_strategy(strategy) for strategy in decrypted_strategies]
