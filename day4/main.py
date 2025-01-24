@@ -4,6 +4,7 @@ Camp Cleanup
 https://adventofcode.com/2022/day/4
 """
 
+from collections.abc import Callable
 from os import path
 from typing import NamedTuple
 
@@ -58,12 +59,25 @@ def assignments_have_full_overlap(assignment_pair: AssignmentPair) -> bool:
     return assignment1_overlaps_2 or assignment2_overlaps_1
 
 
-def count_assignment_pairs_with_full_overlap(
-    assignment_pairs: list[AssignmentPair],
-) -> int:
-    """Count the number of assignment pairs with full overlap."""
+def assignments_have_partial_overlap(assignment_pair: AssignmentPair) -> bool:
+    """Check if one assignment partially overlaps the other."""
 
-    return sum(assignments_have_full_overlap(pair) for pair in assignment_pairs)
+    start1, end1 = assignment_pair.camper1_assignment
+    start2, end2 = assignment_pair.camper2_assignment
+
+    assignment1_overlaps_2 = start1 <= start2 <= end1
+    assignment2_overlaps_1 = start2 <= start1 <= end2
+
+    return assignment1_overlaps_2 or assignment2_overlaps_1
+
+
+def count_assignment_pairs_satisfying_condition(
+    assignment_pairs: list[AssignmentPair],
+    condition: Callable[[AssignmentPair], bool],
+) -> int:
+    """Count the number of assignment pairs that satisfy a given condition."""
+
+    return sum(condition(pair) for pair in assignment_pairs)
 
 
 def main() -> None:
@@ -73,10 +87,18 @@ def main() -> None:
     file_path = path.join(path.dirname(__file__), input_file)
 
     assignment_pairs = read_assignment_pairs(file_path)
-    print(assignment_pairs)
 
-    full_overlap_count = count_assignment_pairs_with_full_overlap(assignment_pairs)
-    print(full_overlap_count)
+    full_overlap_count = count_assignment_pairs_satisfying_condition(
+        assignment_pairs,
+        assignments_have_full_overlap,
+    )
+    print(f"The number of full overlaps is {full_overlap_count}")
+
+    partial_overlap_count = count_assignment_pairs_satisfying_condition(
+        assignment_pairs,
+        assignments_have_partial_overlap,
+    )
+    print(f"The number of partial overlaps is {partial_overlap_count}")
 
 
 if __name__ == "__main__":
