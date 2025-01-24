@@ -6,7 +6,7 @@ https://adventofcode.com/2022/day/5
 
 import re
 from os import path
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 INPUT_FILE = "input.txt"
 TEST_FILE = "test.txt"
@@ -28,6 +28,9 @@ SupplyStack = list[str]
 
 class Parameters(NamedTuple):
     """Represents the parameters of the supply stacks."""
+
+    # NOTE: The stacks are 1-indexed in the input, so we need to ensure
+    # that we decrement the stack numbers before using them as indices.
 
     initial_stacks: list[SupplyStack]
     rearrangement_procedure: list[Move]
@@ -88,20 +91,48 @@ def parse_move(line: str) -> Move:
 def execute_rearrangement(
     initial_stacks: list[SupplyStack],
     rearrangement_procedure: list[Move],
+    move_crates: Callable[[list[SupplyStack], Move], list[SupplyStack]],
 ) -> list[SupplyStack]:
     """Execute the rearrangement procedure on the initial supply stacks."""
 
     stacks = [stack.copy() for stack in initial_stacks]
 
-    for amount, source, destination in rearrangement_procedure:
-        # NOTE: The stacks are 1-indexed in the input so we decrement the indices.
+    for move in rearrangement_procedure:
+        move_crates(stacks, move)
 
-        source_stack = stacks[source - 1]
-        destination_stack = stacks[destination - 1]
+    return stacks
 
-        for _ in range(amount):
-            crate = source_stack.pop()
-            destination_stack.append(crate)
+
+def move_crates_one_by_one(stacks: list[SupplyStack], move: Move) -> list[SupplyStack]:
+    """Move crates between stacks one by one."""
+
+    amount, source, destination = move
+
+    source_stack = stacks[source - 1]
+    destination_stack = stacks[destination - 1]
+
+    for _ in range(amount):
+        crate = source_stack.pop()
+        destination_stack.append(crate)
+
+    return stacks
+
+
+def move_crates_as_group(stacks: list[SupplyStack], move: Move) -> list[SupplyStack]:
+    """Move crates between stacks as a group.
+
+    This maintains their relative ordering when moving them.
+    """
+
+    amount, source, destination = move
+
+    source_stack = stacks[source - 1]
+    destination_stack = stacks[destination - 1]
+
+    crates = source_stack[-amount:]
+    source_stack[-amount:] = []
+
+    destination_stack.extend(crates)
 
     return stacks
 
@@ -119,10 +150,28 @@ def main() -> None:
     file_path = path.join(path.dirname(__file__), input_file)
 
     initial_stacks, rearrangement_procedure = read_operation_parameters(file_path)
-    final_stacks = execute_rearrangement(initial_stacks, rearrangement_procedure)
 
-    top_items = combine_top_items(final_stacks)
-    print(f"The combined top items are: {top_items}")
+    final_stacks_with_one_by_one_movements = execute_rearrangement(
+        initial_stacks,
+        rearrangement_procedure,
+        move_crates_one_by_one,
+    )
+    top_items_with_one_by_one_movements = combine_top_items(
+        final_stacks_with_one_by_one_movements,
+    )
+    print("After moving the crates one by one:")
+    print(f"The combined top items are: {top_items_with_one_by_one_movements}")
+
+    final_stacks_with_group_movements = execute_rearrangement(
+        initial_stacks,
+        rearrangement_procedure,
+        move_crates_as_group,
+    )
+    top_items_with_group_movements = combine_top_items(
+        final_stacks_with_group_movements,
+    )
+    print("After moving the crates as a group:")
+    print(f"The combined top items are: {top_items_with_group_movements}")
 
 
 if __name__ == "__main__":
