@@ -12,6 +12,8 @@ TEST_FILE = "test.txt"
 
 MAX_DIRECTORY_SIZE = 100000
 ROOT_DIRECTORY = "/"
+TOTAL_DISK_SPACE = 70000000
+UPDATE_SIZE = 30000000
 
 
 class File(NamedTuple):
@@ -252,6 +254,36 @@ def sum_directory_sizes(directories: list[Directory]) -> int:
     return sum(directory.size for directory in directories)
 
 
+def find_smallest_directory_to_make_space(
+    filesystem: Filesystem,
+    maximum_available_space: int,
+    required_space: int,
+) -> Directory:
+    """Find the smallest directory that can be deleted to make enough space."""
+
+    used_space = filesystem.root.size
+    unused_space = maximum_available_space - used_space
+    minimum_directory_size = required_space - unused_space
+
+    def find_directory_to_delete(node: DirectoryNode) -> Optional[Directory]:
+        target = None
+        if node.size >= minimum_directory_size:
+            target = Directory(node.name, node.size)
+
+        for subdirectory in node.subdirectories.values():
+            directory = find_directory_to_delete(subdirectory)
+            if directory:
+                target = min(target, directory, key=lambda directory: directory.size)
+
+        return target
+
+    directory = find_directory_to_delete(filesystem.root)
+    if not directory:
+        raise ValueError("No directory found to delete")
+
+    return directory
+
+
 def main() -> None:
     """Read terminal output from a file and process the filesystem it describes."""
 
@@ -272,6 +304,13 @@ def main() -> None:
         f"The total size of all directories with at most {MAX_DIRECTORY_SIZE} bytes:",
         small_directories_total_size,
     )
+
+    directory_to_delete = find_smallest_directory_to_make_space(
+        filesystem,
+        TOTAL_DISK_SPACE,
+        UPDATE_SIZE,
+    )
+    print("The smallest directory to delete to make space:", directory_to_delete)
 
 
 if __name__ == "__main__":
